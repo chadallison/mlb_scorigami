@@ -59,7 +59,7 @@ if (length(loop_dates) > 0) {
       select(date, away_team = teams.away.team.name, away_score = teams.away.score,
              home_score = teams.home.score, home_team = teams.home.team.name)
     
-    end_games = rbind(season_end_games, loop_df)
+    season_end_games = rbind(season_end_games, loop_df)
   }
 }
 
@@ -160,7 +160,7 @@ ggplotly(scores_full |>
   labs(title = paste0("Last Scorigami: ", most_recent_score, " on ", most_recent_date)))
 ```
 
-### Yesterday's Game Results
+### Yesterday's Game Results (Sorted by Rarity)
 
 ```{r fold_code = T, fig.width = 9, fig.height = 6}
 yesterday = season_end_games |>
@@ -171,7 +171,10 @@ yesterday = season_end_games |>
          lose_team = ifelse(home_score > away_score, away_team, home_team),
          final_score = paste0(win_score, "-", lose_score),
          score_info = sapply(final_score, get_score_info),
-         row = row_number())
+         row = row_number(),
+         n_occur = sapply(final_score, get_n_occurrences),
+         total_score = home_score + away_score) |>
+  arrange(n_occur, desc(total_score))
 
 plot_df = data.frame(game = 1:nrow(yesterday), text = NA)
 
