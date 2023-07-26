@@ -149,7 +149,7 @@ ggplotly(scores_full |>
          lose_score = as.integer(lose_score)) |>
   rename(`Winning Score` = win_score, `Losing Score` = lose_score, `Times Occurred` = occurrences) |>
   ggplot(aes(`Winning Score`, `Losing Score`, text = paste0("Last Occurred: ", last_occurred))) +
-  geom_point(aes(col = `Times Occurred`), shape = "square", size = 3, show.legend = F) +
+  geom_point(aes(col = `Times Occurred`), shape = "square", size = 4, show.legend = F) +
   scale_color_gradient(low = "#BDD2B8", high = "#71896C") +
   scale_x_continuous(breaks = seq(0, 50, by = 1)) +
   scale_y_continuous(breaks = seq(0, 50, by = 1)) +
