@@ -110,6 +110,14 @@ get_last_occurrence = function(f_score) {
     max())
 }
 
+# function to find second-to-last occurrence of a score
+get_2last_occurrence = function(f_score) {
+  return(all_scores |>
+    filter(score == f_score & date != Sys.Date() - 1) |>
+    pull(date) |>
+    max())
+}
+
 # function to find how many times a score has occurred
 get_n_occurrences = function(f_score) {
   scores_counts |>
@@ -123,7 +131,7 @@ get_score_info = function(f_score) {
     paste0("Scorigami! The score ", f_score, " has never occurred before.")
   } else {
     return(paste0("The score ", f_score, " has occurred ", get_n_occurrences(f_score),
-                  " times, and last occurred on ", get_last_occurrence(f_score), "."))
+                  " times, and last occurred on ", get_2last_occurrence(f_score), "."))
   }
 }
 
@@ -171,10 +179,10 @@ yesterday = season_end_games |>
          lose_team = ifelse(home_score > away_score, away_team, home_team),
          final_score = paste0(win_score, "-", lose_score),
          score_info = sapply(final_score, get_score_info),
-         row = row_number(),
          n_occur = sapply(final_score, get_n_occurrences),
          total_score = home_score + away_score) |>
-  arrange(n_occur, desc(total_score))
+  arrange(desc(n_occur), desc(total_score)) |>
+  mutate(row = row_number())
 
 plot_df = data.frame(game = 1:nrow(yesterday), text = NA)
 
@@ -192,7 +200,8 @@ for (i in 1:nrow(yesterday)) {
 plot_df |>
   ggplot(aes(x = 1, game)) +
   geom_text(aes(label = text), size = 4) +
-  theme_void()
+  theme_void() +
+  theme(plot.background = element_rect(fill = "#DFDAD1"))
 ```
 
 
