@@ -39,7 +39,7 @@ knitr::knit_hooks$set(source = function(x, options) {
 
 ### MLB Scorigami Since 1901
 
-```{r message = F, warning = F, echo = F, fig.width = 9, fig.height = 6, fold_code = T}
+```{r message = F, warning = F, fig.width = 9, fig.height = 6, fold_code = T}
 # end_games = data.frame(date = NULL, away_team = NULL, away_score = NULL,
 #                        home_score = NULL, home_team = NULL)
 
@@ -119,8 +119,12 @@ get_n_occurrences = function(f_score) {
 
 # function to get info on how many times a score has occurred and when it last occurred
 get_score_info = function(f_score) {
-  return(paste0("The score ", f_score, " has occurred ", get_n_occurrences(f_score),
-                " times, and last occurred on ", get_last_occurrence(f_score), "."))
+  if (get_n_occurrences(f_score) == 1) {
+    paste0("Scorigami! The score ", f_score, " has never occurred before.")
+  } else {
+    return(paste0("The score ", f_score, " has occurred ", get_n_occurrences(f_score),
+                  " times, and last occurred on ", get_last_occurrence(f_score), "."))
+  }
 }
 
 # adding last occurrence to full score data
@@ -158,7 +162,7 @@ ggplotly(scores_full |>
 
 ### Yesterday's Game Results
 
-```{r echo = F, fig.width = 9, fig.height = 6}
+```{r fold_code = T, fig.width = 9, fig.height = 6}
 yesterday = season_end_games |>
   filter(date == Sys.Date() - 1) |>
   mutate(win_score = ifelse(home_score > away_score, home_score, away_score),
