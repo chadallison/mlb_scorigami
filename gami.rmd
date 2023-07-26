@@ -156,6 +156,40 @@ ggplotly(scores_full |>
   labs(title = paste0("Last Scorigami: ", most_recent_score, " on ", most_recent_date)))
 ```
 
+### Yesterday's Game Results
+
+```{r echo = F, fig.width = 9, fig.height = 6}
+yesterday = season_end_games |>
+  filter(date == Sys.Date() - 1) |>
+  mutate(win_score = ifelse(home_score > away_score, home_score, away_score),
+         lose_score = ifelse(home_score > away_score, away_score, home_score),
+         win_team = ifelse(home_score > away_score, home_team, away_team),
+         lose_team = ifelse(home_score > away_score, away_team, home_team),
+         final_score = paste0(win_score, "-", lose_score),
+         score_info = sapply(final_score, get_score_info),
+         row = row_number())
+
+plot_df = data.frame(game = 1:nrow(yesterday), text = NA)
+
+for (i in 1:nrow(yesterday)) {
+  data = yesterday |> filter(row == i)
+  winner = data$win_team
+  loser = data$lose_team
+  w_score = data$win_score
+  l_score = data$lose_score
+  info = data$score_info
+  text = paste0("⚾︎ ", winner, " ", w_score, ", ", loser, " ", l_score, ": ", info)
+  plot_df$text[i] = text
+}
+
+plot_df |>
+  ggplot(aes(x = 1, game)) +
+  geom_text(aes(label = text), size = 4) +
+  theme_void()
+```
+
+
+
 
 
 
