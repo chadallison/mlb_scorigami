@@ -1,0 +1,188 @@
+---
+output: html_document
+---
+
+```{r message = F, warning = F, include = F}
+library(tidyverse)
+library(tidymodels)
+library(tvthemes)
+library(janitor)
+library(plotly)
+library(patchwork)
+library(baseballr)
+library(retrosheet)
+
+theme_custom = theme_avatar() +
+  theme(plot.title = element_text(hjust = 0.5),
+        plot.subtitle = element_text(hjust = 0.5, size = 9, vjust = 2.5, face = "italic"),
+        plot.caption = element_text(face = "italic"),
+        panel.grid.major = element_line(linewidth = 0.5, colour = "#DFDAD1"),
+        panel.grid.minor = element_line(linewidth = 0.5, colour = "#DFDAD1"))
+
+theme_set(theme_custom)
+
+knitr::knit_hooks$set(source = function(x, options) {
+    hook.r = function(x, options) {
+      fence = "```"
+      language = tolower(options$engine)
+      if (language == "node") language = "javascript"
+      if (!options$highlight) language = "text"
+      if (!is.null(options$fold_code)) {
+        paste0("\n\n", "<details><summary>View Code</summary>\n", fence, language,
+               "\n", x, fence, "\n\n", "</details>\n")
+      } else paste0('\n\n', fence, language, '\n', x, fence,  '\n\n')
+    }
+    x = knitr:::hilight_source(x, "markdown", options)
+    hook.r(paste(c(x, ""), collapse = "\n"), options)
+})
+```
+
+### MLB Scorigami Since 1901
+
+```{r message = F, warning = F, echo = F, fig.width = 9, fig.height = 6, fold_code = T}
+# end_games = data.frame(date = NULL, away_team = NULL, away_score = NULL,
+#                        home_score = NULL, home_team = NULL)
+
+# loading in this season's end game data
+season_end_games = read_csv("season_end_games.csv", col_types = cols())
+
+# accounting for all-star weekend and preventing repopulating of existing data
+asg_dates = seq.Date(from = as_date("2023-07-10"), to = as_date("2023-07-13"), by = 1)
+loop_dates = seq.Date(from = as_date("2023-03-30"), to = Sys.Date() - 1, by = 1)
+loop_dates = loop_dates[!loop_dates %in% asg_dates & !loop_dates %in% season_end_games$date]
+
+# loop to add new data
+if (length(loop_dates) > 0) {
+  for (i in 1:length(loop_dates)) {
+    loop_df = mlb_game_pks(date = loop_dates[i]) |>
+      mutate(date = loop_dates[i]) |>
+      select(date, away_team = teams.away.team.name, away_score = teams.away.score,
+             home_score = teams.home.score, home_team = teams.home.team.name)
+    
+    end_games = rbind(season_end_games, loop_df)
+  }
+}
+
+# updating the folder's season end game data
+write_csv(season_end_games, "season_end_games.csv")
+
+# historic_end_games = data.frame(date = NULL, away_team = NULL, away_score = NULL,
+#                                 home_score = NULL, home_team = NULL)
+# 
+# for (i in 1901:2022) {
+#   loop_df = get_retrosheet(type = "game", year = i) |>
+#     select(date = Date, away_team = VisTm, away_score = VisRuns,
+#            home_score = HmRuns, home_team = HmTm)
+# 
+#   historic_end_games = rbind(historic_end_games, loop_df)
+# }
+# 
+# write_csv(historic_end_games, "historic_end_games.csv")
+
+# loading in historic end game data
+historic_end_games = read_csv("historic_end_games.csv", col_types = cols())
+
+# combining this season and historic end game results
+end_games = rbind(historic_end_games, season_end_games) |>
+  arrange(desc(date))
+
+# data frame of all winning and losing scores with dates
+all_scores = end_games |>
+  transmute(date,
+            win_score = case_when(home_score > away_score ~ home_score,
+                                  home_score < away_score ~ away_score,
+                                  home_score == away_score ~ home_score),
+            lose_score = case_when(home_score > away_score ~ away_score,
+                                   home_score < away_score ~ home_score,
+                                   home_score == away_score ~ away_score),
+            score = paste0(win_score, "-", lose_score))
+
+# counts of each unique final score
+scores_counts = all_scores |>
+  count(score) |>
+  rename(occurrences = n)
+
+# function to find last time a score happened
+get_last_occurrence = function(f_score) {
+  return(all_scores |>
+    filter(score == f_score) |>
+    pull(date) |>
+    max())
+}
+
+# function to find how many times a score has occurred
+get_n_occurrences = function(f_score) {
+  scores_counts |>
+    filter(score == f_score) |>
+    pull(occurrences)
+}
+
+# function to get info on how many times a score has occurred and when it last occurred
+get_score_info = function(f_score) {
+  return(paste0("The score ", f_score, " has occurred ", get_n_occurrences(f_score),
+                " times, and last occurred on ", get_last_occurrence(f_score), "."))
+}
+
+# adding last occurrence to full score data
+scores_full = scores_counts |>
+  rowwise() |>
+  mutate(last_occurred = get_last_occurrence(score)) |>
+  ungroup()
+
+# getting score of most recent scorigami
+most_recent_score = scores_full |>
+  filter(occurrences == 1) |>
+  arrange(desc(last_occurred)) |>
+  head(1) |>
+  pull(score)
+
+# getting data of most recent scorigami
+most_recent_date = scores_full |>
+  filter(occurrences == 1) |>
+  pull(last_occurred) |>
+  max()
+
+# generating plot with plotly
+ggplotly(scores_full |>
+  separate(score, into = c("win_score", "lose_score"), sep = "-", remove = F) |>
+  mutate(win_score = as.integer(win_score),
+         lose_score = as.integer(lose_score)) |>
+  rename(`Winning Score` = win_score, `Losing Score` = lose_score, `Times Occurred` = occurrences) |>
+  ggplot(aes(`Winning Score`, `Losing Score`, text = paste0("Last Occurred: ", last_occurred))) +
+  geom_point(aes(col = `Times Occurred`), shape = "square", size = 3, show.legend = F) +
+  scale_color_gradient(low = "#BDD2B8", high = "#71896C") +
+  scale_x_continuous(breaks = seq(0, 50, by = 1)) +
+  scale_y_continuous(breaks = seq(0, 50, by = 1)) +
+  labs(title = paste0("Last Scorigami: ", most_recent_score, " on ", most_recent_date)))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
