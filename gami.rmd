@@ -180,7 +180,7 @@ ggplotly(scores_full |>
 
 ```{r fold_code = T, fig.width = 9, fig.height = 6}
 yesterday = season_end_games |>
-  filter(date == Sys.Date() - 1) |>
+  filter(date == Sys.Date() - 1 & !is.na(home_score) & !is.na(away_score)) |>
   mutate(win_score = ifelse(home_score > away_score, home_score, away_score),
          lose_score = ifelse(home_score > away_score, away_score, home_score),
          win_team = ifelse(home_score > away_score, home_team, away_team),
