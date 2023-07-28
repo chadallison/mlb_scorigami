@@ -2,6 +2,12 @@
 output: html_document
 ---
 
+___
+
+**Data: MLB.com via {baseballr}**
+
+___
+
 ```{r message = F, warning = F, include = F}
 library(tidyverse)
 library(tidymodels)
@@ -88,6 +94,7 @@ end_games = rbind(historic_end_games, season_end_games) |>
 
 # data frame of all winning and losing scores with dates
 all_scores = end_games |>
+  filter(!is.na(home_score) & !is.na(away_score)) |>
   transmute(date,
             win_score = case_when(home_score > away_score ~ home_score,
                                   home_score < away_score ~ away_score,
