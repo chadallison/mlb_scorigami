@@ -183,7 +183,7 @@ ggplotly(scores_full |>
   labs(title = paste0("Last Scorigami: ", most_recent_score, " on ", better_date(most_recent_date))))
 ```
 
-### Yesterday's Game Results (Sorted by Rarity)
+### Yesterday's Game Results (Sorted by Date of Last Occurrence)
 
 ```{r fold_code = T, fig.width = 9, fig.height = 6}
 yesterday = season_end_games |>
@@ -195,8 +195,9 @@ yesterday = season_end_games |>
          final_score = paste0(win_score, "-", lose_score),
          score_info = sapply(final_score, get_score_info),
          n_occur = sapply(final_score, get_n_occurrences),
+         last_occur = sapply(final_score, get_2last_occurrence),
          total_score = home_score + away_score) |>
-  arrange(desc(n_occur), desc(total_score)) |>
+  arrange(desc(last_occur), desc(n_occur), desc(total_score)) |>
   mutate(row = row_number())
 
 plot_df = data.frame(game = 1:nrow(yesterday), text = NA)
